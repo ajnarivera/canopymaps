@@ -1,0 +1,42 @@
+
+var table1 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Escalon_Table_toAsset')
+var table2 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Lodi_Table_toAsset')
+var table3 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Manteca_Table_toAsset')
+var table4 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Modesto_Table_toAsset')
+var table5 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Stockton_Table_toAsset')
+var table6 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Tracy_Table_toAsset')
+var table7 = ee.FeatureCollection('projects/ee-ajnaram/assets/Canopy_Percent_Turlock_Table_toAsset')
+
+
+    
+    
+///Merge canopy features
+var canopymaps = table1.merge(table2);
+var canopymaps = canopymaps.merge(table3);
+var canopymaps = canopymaps.merge(table4);
+var canopymaps = canopymaps.merge(table5);
+var canopymaps = canopymaps.merge(table6);
+var canopymaps = canopymaps.merge(table7);
+
+
+var empty = ee.Image().int32();
+var Paint = empty.paint({
+    featureCollection: canopymaps,
+    color: 'mean',
+});
+
+var palette = ['d3f6d1', 'a7d7c5', '74b49b', '5c8d89', '346473'];
+var visParams = {
+    min: 0,
+    max: 0.5,
+    palette: palette
+};
+Map.addLayer(Paint, visParams,
+    'mean');
+
+///add borders for census block groups
+
+var styling = {color: 'grey', fillColor: '00000000', width: 1};
+Map.addLayer(canopymaps.style(styling));
+
+Map.setCenter(-121.2161,37.7974 , 8)	
