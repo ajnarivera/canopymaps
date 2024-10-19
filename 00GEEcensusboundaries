@@ -1,0 +1,39 @@
+//First upload zip file from census.  From census download state --> census block group
+//call import of file from menu
+
+
+// uncheck the next line to check the import
+//Map.addLayer(table)
+
+//dump counties that are not North Central Valley
+var BlockGroups = table.filter("COUNTYFP == '077'|| COUNTYFP == '099'")
+
+//make filtered shapefiles into an Asset
+Export.table.toAsset({
+  collection: BlockGroups,
+  description:'CentralValleyBlocksGroups',
+  assetId: 'CVBlockGroups',
+});
+
+//uncheck the next line to check the filter
+//Map.addLayer(urb)
+
+
+//upload zip file from census.  From census, download Urban Areas for whole usa 
+//call import of file from menu
+//uncheck the next line to check the import
+//Map.addLayer(table2)
+
+//Only keep North Central Valley
+//var temp = table2.filter()
+var urb = table2.filter("NAME20 == 'Stockton, CA'|| NAME20 == 'Modesto, CA'|| NAME20 == 'Lodi, CA'||NAME20 =='Turlock, CA'||NAME20=='Escalon, CA'||NAME20=='Manteca, CA'||NAME20=='Tracy--Mountain House, CA'")
+
+//uncheck the next line to check the filter
+//Map.addLayer(urb)
+
+//make filtered shapefiles into an Asset
+Export.table.toAsset({
+  collection: urb,
+  description:'urbanareasCV',
+  assetId: 'UrbanAreasCV',
+});
