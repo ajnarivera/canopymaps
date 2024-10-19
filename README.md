@@ -1,7 +1,8 @@
 # canopymaps
 Mapping canopy cover for the central valley
 ***************************************************************************************
-Files 01 and 02 are Google earth engine scripts, a GEE account is needed to rerun them
+
+Files 00, 01 and 02 are Google earth engine scripts, a GEE account is needed to rerun them
 
 File 03 accesses both the US Census API and Google Earth Engine, a Census API key and access to a Google Drive is required to run this script
 
