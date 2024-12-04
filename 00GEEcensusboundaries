@@ -1,4 +1,5 @@
 //First upload zip file from census.  From census download state --> census block group
+//alternative grab tract file
 //call import of file from menu
 
 
@@ -8,32 +9,28 @@
 //dump counties that are not North Central Valley
 var BlockGroups = table.filter("COUNTYFP == '077'|| COUNTYFP == '099'")
 
+
 //make filtered shapefiles into an Asset
 Export.table.toAsset({
   collection: BlockGroups,
-  description:'CentralValleyBlocksGroups',
-  assetId: 'CVBlockGroups',
+  description:'SanJoaquinValleyBlocksGroups',
+  assetId: 'SJVBlockGroups',
 });
 
 //uncheck the next line to check the filter
-//Map.addLayer(urb)
+//Map.addLayer(BlockGroups)
 
 
-//upload zip file from census.  From census, download Urban Areas for whole usa 
-//call import of file from menu
-//uncheck the next line to check the import
-//Map.addLayer(table2)
+//alternative dump counties not in the entire Central Valley
 
-//Only keep North Central Valley
-//var temp = table2.filter()
-var urb = table2.filter("NAME20 == 'Stockton, CA'|| NAME20 == 'Modesto, CA'|| NAME20 == 'Lodi, CA'||NAME20 =='Turlock, CA'||NAME20=='Escalon, CA'||NAME20=='Manteca, CA'||NAME20=='Tracy--Mountain House, CA'")
-
-//uncheck the next line to check the filter
-//Map.addLayer(urb)
-
+var CVTracts = table.filter("COUNTYFP == '007'||COUNTYFP == '011'||COUNTYFP == '019'||COUNTYFP == '021'||COUNTYFP == '029'||COUNTYFP == '031'||COUNTYFP == '029'||COUNTYFP == '047'||COUNTYFP == '067'||COUNTYFP == '077'||COUNTYFP == '089'||COUNTYFP == '099'||COUNTYFP == '101'||COUNTYFP == '103'||COUNTYFP == '107'||COUNTYFP == '113'||COUNTYFP == '115'")
 //make filtered shapefiles into an Asset
 Export.table.toAsset({
-  collection: urb,
-  description:'urbanareasCV',
-  assetId: 'UrbanAreasCV',
+  collection: CVTracts,
+  description:'CentralValleyCensusTracts',
+  assetId: 'CVCensusTracts',
 });
+
+//uncheck the next line to check the filter
+//Map.addLayer(CVTracts)
+
