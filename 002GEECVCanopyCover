@@ -1,0 +1,185 @@
+
+//######################################################################################################## 
+//#                                                                                                    #\\
+//#                      Calculating surface urban heat islands using Landsat data                     #\\
+//#                                                                                                    #\\
+//########################################################################################################
+// date: November 2024
+// authors: Ajna Rivera, modified from published work by TC Chakraborty
+
+//Load in urban areas with seeded index column
+var Cities=ee.FeatureCollection("projects/ee-ajnaram/assets/TIGER_CV_Urban_Areas_seeded");
+
+//Load in census block groups in California this is from GEE Census Tracts file
+var Groups =ee.FeatureCollection("projects/ee-ajnaram/assets/CAcensustracts2015");
+
+//Subset census block groups overlapping with cities
+var Blocks=Groups.filterBounds(Cities.union())
+
+
+
+//Export result to assets (only export the first time)
+//Export.table.toAsset({
+//collection: Blocks, assetId: 'CV_AllCities_Tract'
+//});
+//Map.addLayer(Blocks)
+
+//Load in urban census block groups in California
+var Blocks = ee.FeatureCollection("projects/ee-ajnaram/assets/CV_AllCities_Tract");
+
+//Function for adding city metadata to block groups
+function addMeta(feature){
+  var select=ee.Feature(Cities.filterBounds(feature.geometry()).first())
+  return feature.set({'NAME':select.get('NAME20')})
+}
+
+//Map function over census block group feature collection
+var Blocks_Meta=Blocks.map(addMeta)
+
+//Export result to assets (only export the first time)
+//Export.table.toAsset({
+//collection: Blocks_Meta, assetId: 'CV_AllCities_Tract_Meta'
+//});
+ 
+//Load in urban areas with seeded index column
+var cities=Cities
+
+
+//Load in urban census block groups with metadata in California
+var table=ee.FeatureCollection('projects/ee-ajnaram/assets/CV_AllCities_Tract_Meta')
+
+//Remove urban clusters that are not completely within the state.
+var acs = ee.FeatureCollection(table)
+var ca_cities = ee.FeatureCollection(cities).filterMetadata('NAME20','not_contains','AZ').filterMetadata('NAME20','not_contains','NV')
+
+
+var acs_outline = ee.Image().byte().paint({featureCollection:acs, color: 1, width: 1});
+var cities_outline = ee.Image().byte().paint({featureCollection:ca_cities, color: 2, width: 1});
+
+
+//Load in the processed Landsat images from published paper, 
+//TO DO: modify to the more recent Landsat LSTs using 2016 paper on land surface temp
+
+//var exImagewinter=ee.Image('projects/ee-ajnaram/assets/Landsat_LST_Cal_v4_Winter')
+//var exImagesummer=ee.Image('projects/ee-ajnaram/assets/Landsat_LST_Cal_v4_Summer')
+var exImage=ee.Image('projects/ee-ajnaram/assets/LSTsummer2017')
+
+//Select the LST band
+var LST=exImage.select('LST')
+//var LSTwinter=exImagewinter.select('LST')
+//var LSTsummer=exImagesummer.select('LST')
+var cmap1 = ['blue', 'cyan', 'green', 'yellow', 'red'];
+//make sure LST imported ok
+//Map.addLayer(LST, {min: 290, max: 320, palette: cmap1}, 'LST Mosaic');
+
+
+
+//Select the NLCD land cover data
+// Import the NLCD collection.
+//Select the NLCD land cover data
+var landcover=ee.Image('USGS/NLCD/NLCD2016').select('landcover');
+var urban=landcover;
+
+//Create pixel area image for non-open water pixels
+var Im_Area=ee.Image.pixelArea().clip(ca_cities).updateMask(urban.neq(11));
+
+//Select urban pixels in image
+var urbanurban=urban.updateMask(urban.eq(23).or(urban.eq(24)).or(urban.eq(21)).or(urban.eq(22)))
+
+
+//Select background reference pixels in image
+var urbannonurban=urban.updateMask(urban.eq(41).or(urban.eq(42)).or(urban.eq(43))
+.or(urban.eq(51)).or(urban.eq(52)).or(urban.eq(71)).or(urban.eq(72)).or(urban.eq(73))
+.or(urban.eq(74)).or(urban.eq(81)).or(urban.eq(82)))
+
+//Create pixel area image for non-water and water-adjacent pixels
+var LSTurban=urban.updateMask(urban.neq(11).or(urban.eq(90)).or(urban.eq(95)))
+
+//Load in urban buffer feature collection
+var Cities_buff=ee.FeatureCollection('projects/ee-ajnaram/assets/TIGER_CV_Urban_Areas_buffer')
+
+
+
+//Select LST pixels corresponding to urban land cover within the clusters
+var dayurbanLST=LST.updateMask(urbanurban).clip(ca_cities);
+
+//Select LST pixels corresponding to reference land cover (non vegetation, water body or >50 m elevation differential) within the clusters
+var dayruralLST=LST.updateMask(urbannonurban);
+var AllLST=LST.updateMask(LSTurban)
+
+//looks ok
+Map.addLayer(dayurbanLST,{min: 290, max: 320, palette: cmap1}, 'LST Mosaic')
+
+//Function to calculate urban and rural LST corresponding to each cluster
+  var regions_urb= function(feature){
+    
+    var ref_rural=ee.Feature(Cities_buff.filterMetadata('Index_column','equals',feature.get('Index_column')).first());
+
+      var drLST=dayruralLST.reduceRegion({geometry: ref_rural.geometry(),  reducer: ee.Reducer.mean(),  scale: 30, maxPixels:9999999999999999})
+        var duLST=dayurbanLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.mean(),  scale: 30, maxPixels:9999999999999999})
+       var dLST=AllLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.mean(),  scale: 30, maxPixels:9999999999999999})
+
+           var drLSTstd=dayruralLST.reduceRegion({geometry: ref_rural.geometry(),  reducer: ee.Reducer.stdDev(),  scale: 30, maxPixels:9999999999999999})
+        var duLSTstd=dayurbanLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.stdDev(),  scale: 30, maxPixels:9999999999999999})
+       var dLSTstd=AllLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.stdDev(),  scale: 30, maxPixels:9999999999999999})
+     
+    return feature.set({'Urban_LST':duLST.get('LST'),'Rural_LST':drLST.get('LST'),'All_LST':dLST.get('LST'),
+      'Urban_LSTstd':duLSTstd.get('LST'),'Rural_LSTstd':drLSTstd.get('LST'),'All_LSTstd':dLSTstd.get('LST'),
+  })
+    
+  }
+
+
+
+//Function to calculate urban and rural LST corresponding to each census block group for the different cases
+  var regions_cbg= function(feature){
+ var duLST=dayurbanLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.mean(),  scale: 30, maxPixels:9999999999999999})
+       var dLST=AllLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.mean(),  scale: 30, maxPixels:9999999999999999})
+
+  var duLSTstd=dayurbanLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.stdDev(),  scale: 30, maxPixels:9999999999999999})
+       var dLSTstd=AllLST.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.stdDev(),  scale: 30, maxPixels:9999999999999999})
+            var Ar_pixel=Im_Area.reduceRegion({geometry: feature.geometry(),  reducer: ee.Reducer.sum(),  scale: 30, maxPixels:9999999999999999})
+
+    return feature.set({'Urban_LST':duLST.get('LST'),'All_LST':dLST.get('LST'),
+      'Urban_LSTstd':duLSTstd.get('LST'),'All_LSTstd':dLSTstd.get('LST'),
+      'Ar_pixel':Ar_pixel.get('area')
+    })
+    
+  }
+
+//Remove urban clusters that are not completely within the state.
+acs=acs.filterMetadata('NAME','not_contains','AZ').filterMetadata('NAME','not_contains','NV')
+
+//Map functions for the corresponding feature collections
+var urb_diss_UHI=ca_cities.map(regions_urb)
+var urb_cbg_UHI=acs.map(regions_cbg)
+
+//Export result to assets (only export the first time)
+Export.table.toAsset({
+collection: urb_diss_UHI, assetId: 'CVUHI_diss_vf_All'
+});
+
+//Export.table.toDrive({
+//collection: urb_diss_UHI, folder: 'CVUHI_Tanu', description: 'CVUHI_diss_vf_All',  fileFormat: 'GeoJSON'
+//});
+
+//Export results with and without geometry to drive
+var urb_diss_UHI=urb_diss_UHI.select({propertySelectors:ee.Feature(urb_diss_UHI.first()).propertyNames(),retainGeometry:false})
+
+//Export.table.toDrive({
+//collection: urb_diss_UHI, folder: 'CVUHI_Tanu', description: 'CVUHI_diss_vf_All',  fileFormat: 'CSV'
+//});
+
+Export.table.toAsset({
+collection: urb_cbg_UHI, assetId: 'CVUHI_cb_vf_All'
+});
+
+//Export.table.toDrive({
+//collection: urb_cbg_UHI, folder: 'CVUHI_Tanu', description: 'CVUHI_cb_vf_All',  fileFormat: 'GeoJSON'
+//});
+
+//var urb_cbg_UHI=urb_cbg_UHI.select({propertySelectors:ee.Feature(urb_cbg_UHI.first()).propertyNames(),retainGeometry:false})
+//Export.table.toDrive({
+//collection: urb_cbg_UHI, folder: 'CVUHI_Tanu', description: 'CVUHI_cb_vf_All',  fileFormat: 'CSV'
+//});
+
