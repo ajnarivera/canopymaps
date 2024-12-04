@@ -1,1 +1,54 @@
+//######################################################################################################## 
+//#                                                                                                    #\\
+//#              Generating standardized urban buffers for urban heat island calculations              #\\
+//#                                                                                                    #\\
+//########################################################################################################
+// date: November 2024
+// authors: Ajna Rivera, modified from published work by TC Chakraborty 
 
+//Load in urban feature collection from published paper
+var urb =ee.FeatureCollection('projects/ee-ajnaram/assets/USUrbanAreas')
+
+var urb = urb.filter("NAME20 =='Coalinga, CA'|| NAME20 =='Avenal, CA'|| NAME20 =='Mountain House, CA'|| NAME20 =='Wasco, CA'|| NAME20 =='Gustine, CA'|| NAME20 =='Newman, CA'|| NAME20 =='Tracy, CA'|| NAME20 =='Bakersfield, CA'|| NAME20 =='Patterson, CA'|| NAME20 =='Dos Palos, CA'|| NAME20 =='Arvin, CA'|| NAME20 =='Mendota, CA'|| NAME20 =='Lemoore Station, CA'|| NAME20 =='Vacaville, CA'|| NAME20 =='Firebaugh, CA'|| NAME20 =='San Joaquin, CA'|| NAME20 =='McFarland, CA'|| NAME20 =='Rio Vista, CA'|| NAME20 =='Delano, CA'|| NAME20 =='Corcoran, CA'|| NAME20 =='Hilmar-Irwin, CA'|| NAME20 =='Winters, CA'|| NAME20 =='Riverdale, CA'|| NAME20 =='Manteca, CA'|| NAME20 =='Dixon, CA'|| NAME20 =='Earlimart, CA'|| NAME20 =='Kerman, CA'|| NAME20 =='Stockton, CA'|| NAME20 =='Esparto, CA'|| NAME20 =='Turlock, CA'|| NAME20 =='Richgrove, CA'|| NAME20 =='Modesto, CA'|| NAME20 =='Hanford, CA'|| NAME20 =='Tipton, CA'|| NAME20 =='Escalon, CA'|| NAME20 =='Merced, CA'|| NAME20 =='Davis, CA'|| NAME20 =='Lodi, CA'|| NAME20 =='Chowchilla, CA'|| NAME20 =='Waterford, CA'|| NAME20 =='Madera, CA'|| NAME20 =='Woodland, CA'|| NAME20 =='Poplar-Cotton Center, CA'|| NAME20 =='Terra Bella, CA'|| NAME20 =='Arbuckle, CA'|| NAME20 =='Selma, CA'|| NAME20 =='Planada, CA'|| NAME20 =='Galt, CA'|| NAME20 =='Visalia, CA'|| NAME20 =='Williams, CA'|| NAME20 =='Fresno, CA'|| NAME20 =='Porterville, CA'|| NAME20 =='Parlier, CA'|| NAME20 =='Bonadelle Ranchos-Madera Ranchos, CA'|| NAME20 =='Lindsay, CA'|| NAME20 =='Sanger, CA'|| NAME20 =='Reedley--Dinuba, CA'|| NAME20 =='Colusa, CA'|| NAME20 =='Orosi, CA'|| NAME20 =='Rancho Calaveras--Valley Springs, CA'|| NAME20 =='Orange Cove, CA'|| NAME20 =='Sacramento, CA'|| NAME20 =='Woodlake, CA'|| NAME20 =='Willows, CA'|| NAME20 =='Rancho Murieta, CA'|| NAME20 =='Plumas Lake, CA'|| NAME20 =='Yuba City, CA'|| NAME20 =='Angels, CA'|| NAME20 =='Orland, CA'|| NAME20 =='Live Oak (Sutter County), CA'|| NAME20 =='Corning, CA'|| NAME20 =='Chico, CA'|| NAME20 =='Los Molinos, CA'|| NAME20 =='Red Bluff, CA'|| NAME20 =='Cottonwood, CA'|| NAME20 =='Redding, CA'")
+
+Export.table.toAsset({collection:urb, assetId: 'UrbanAreasCV'})
+
+//Add random seeded column for indexing
+var urb=urb.randomColumn('Index_column', 5)
+
+//Function for calculating area of features
+function are_calc(feature){
+  var ar=ee.Number(feature.area())
+  return feature.set({"Area":ar})
+}
+
+//Map function over urban feature collection
+var urb=urb.map(are_calc)
+
+//Export result to assets (only export the first time)
+Export.table.toAsset({collection:urb, assetId: 'TIGER_CV_Urban_Areas_seeded'})
+
+//Define sequence of buffer widths to be tested
+var Buff_widths=ee.List.sequence(30, 30000, 30)
+
+//Function to generate standardized buffers (~comparable to area of urban cluster)
+function Optimize(feature){
+function buff(bufflength){
+ var Buffed_polygon= ee.Feature(feature.buffer(ee.Number(bufflength))).set({'Buffer_width':ee.Number(bufflength)})
+  var Area=ee.Number((Buffed_polygon.geometry().difference(feature.geometry())).area())
+  return ee.Feature(Buffed_polygon.geometry().difference(feature.geometry())).set({"Buffer_diff":ee.Number(Area.subtract(ee.Number(feature.get('Area')))).abs(),"Buffer_area":Area, 'Buffer_width':Buffed_polygon.get('Buffer_width')})
+}
+
+var Buffed=ee.FeatureCollection(Buff_widths.map(buff))
+var Sorted_bybuffer=Buffed.sort({property:"Buffer_diff"})
+var First_feature=ee.Feature(Sorted_bybuffer.first())
+return First_feature.set({'Index_column':feature.get('Index_column'),'Urban_Area':feature.get('Area'),'Buffer_width':First_feature.get('Buffer_width')})
+
+}
+//Map function over urban feature collection
+var Optimum=urb.map(Optimize)
+
+//Export result to assets
+Export.table.toAsset({collection:Optimum, assetId: 'TIGER_CV_Urban_Areas_buffer'})
+
+Map.addLayer(urb);
