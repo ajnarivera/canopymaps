@@ -2,6 +2,7 @@
 //alternative grab tract file
 //call import of file from menu
 
+table = ee.FeatureCollection('projects/ee-ajnaram/assets/CA2021BlockGroupShapes');
 
 // uncheck the next line to check the import
 //Map.addLayer(table)
@@ -22,9 +23,10 @@ Export.table.toAsset({
 
 
 //alternative dump counties not in the entire Central Valley
-
+table = ee.FeatureCollection('projects/ee-ajnaram/assets/CAcensustracts2015');
 var CVTracts = table.filter("COUNTYFP == '007'||COUNTYFP == '011'||COUNTYFP == '019'||COUNTYFP == '021'||COUNTYFP == '029'||COUNTYFP == '031'||COUNTYFP == '029'||COUNTYFP == '047'||COUNTYFP == '067'||COUNTYFP == '077'||COUNTYFP == '089'||COUNTYFP == '099'||COUNTYFP == '101'||COUNTYFP == '103'||COUNTYFP == '107'||COUNTYFP == '113'||COUNTYFP == '115'")
 //make filtered shapefiles into an Asset
+
 Export.table.toAsset({
   collection: CVTracts,
   description:'CentralValleyCensusTracts',
@@ -33,4 +35,40 @@ Export.table.toAsset({
 
 //uncheck the next line to check the filter
 //Map.addLayer(CVTracts)
+
+//The next part makes the Urban Areas map
+
+//First upload UrbanAreas zip file from census as USUrbanAreas 
+// https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html
+
+
+var table2 =  ee.featureCollection('projects/ee-ajnaram/assets/USUrbanAreas')
+
+// uncheck the next line to check the import
+//Map.addLayer(table2)
+
+//dump counties that are not North Central Valley
+UASJV = table2.filter("NAME20 == 'Stockton, CA'|| NAME20 == 'Modesto, CA'|| NAME20 == 'Lodi, CA'||NAME20 =='Turlock, CA'||NAME20=='Escalon, CA'||NAME20=='Manteca, CA'||NAME20=='Tracy--Mountain House, CA'")
+//Map.addLayer(UASJV)
+
+//Alternatively dump counties not in Central Valley
+var UACV = table.filter("COUNTYFP == '007'||COUNTYFP == '011'||COUNTYFP == '019'||COUNTYFP == '021'||COUNTYFP == '029'||COUNTYFP == '031'||COUNTYFP == '029'||COUNTYFP == '047'||COUNTYFP == '067'||COUNTYFP == '077'||COUNTYFP == '089'||COUNTYFP == '099'||COUNTYFP == '101'||COUNTYFP == '103'||COUNTYFP == '107'||COUNTYFP == '113'||COUNTYFP == '115'")
+
+//Map.addLayer(UACV)
+
+
+//make filtered shapefiles into an Asset
+//Export.table.toAsset({
+//  collection: UASJV,
+//  description:'SanJoaquinValleyUrbanAreas',
+//  assetId: 'UrbanAreasSJV',
+//});
+
+//make filtered shapefiles into an Asset
+//Export.table.toAsset({
+//  collection: UACV,
+//  description:'CentralValleyUrbanAreas',
+//  assetId: 'UrbanAreasCV',
+//});
+
 
