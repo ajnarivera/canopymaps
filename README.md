@@ -1,6 +1,9 @@
 # canopymaps
 Mapping canopy cover for the central valley
 ***************************************************************************************
+NOTE: This repository has two tracts: One generates census tract level data for c. 2016 whole California Central Valley
+The other tract generates census block group level data for 2021 San Joaquin Valley
+
 
 Files 00, 01 and 02 are Google earth engine scripts, a GEE account is needed to rerun them
 
