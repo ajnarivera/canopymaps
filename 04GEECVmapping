@@ -1,0 +1,43 @@
+var table3 = ee.FeatureCollection('projects/ee-ajnaram/assets/canopymapSJVblockgroupsED')
+table3 = table3.filter(ee.Filter.lte('ALAND_x', 10000000));
+
+var palette = ['d3f6d1', 'a7d7c5', '74b49b', '5c8d89', '346473'];
+
+var empty = ee.Image().int32();
+
+var fills = empty.paint({
+  featureCollection: table3,
+  color: 'Canopy_Per',
+});
+Map.addLayer(fills, {palette: palette, max: .5}, 'Tree Cover');
+
+var palette2 = ['bdc9e1', '74a9cf', '2b8cbe', '045a8d'];
+var fills2 = empty.paint({
+  featureCollection: table3,
+  color: 'Total_Popu',
+});
+Map.addLayer(fills2, {palette: palette2, max: 4000}, 'Population');
+
+//var palette3 = ['bdc9e1', '74a9cf', '2b8cbe', '045a8d'];
+
+var fills3 = empty.paint({
+  featureCollection: table3,
+  color: 'Per_capita',
+});
+Map.addLayer(fills3, {palette: palette2, max: 70000}, 'Per capita income');
+
+var fills4 = empty.paint({
+  featureCollection: table3,
+  color: 'Poverty',
+});
+Map.addLayer(fills4, {palette: palette2, max: 0.5}, 'Poverty');
+
+
+
+
+///add borders for census block groups
+
+var styling = {color: 'grey', fillColor: '00000000', width: 1};
+Map.addLayer(table3.style(styling));
+
+Map.setCenter(-121.2161,37.7974 , 10)	
